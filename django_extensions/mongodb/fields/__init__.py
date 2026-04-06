@@ -26,12 +26,10 @@ class SlugField(StringField):
         super().__init__(*args, **kwargs)
 
     def get_internal_type(self):
-        return "SlugField"
+        pass
 
     def formfield(self, **kwargs):
-        defaults = {"form_class": forms.SlugField}
-        defaults.update(kwargs)
-        return super().formfield(**defaults)
+        pass
 
 
 class AutoSlugField(SlugField):
@@ -80,98 +78,23 @@ class AutoSlugField(SlugField):
         If an alternate separator is used, it will also replace any instances
         of the default '-' separator with the new separator.
         """
-        re_sep = "(?:-|%s)" % re.escape(self.separator)
-        value = re.sub("%s+" % re_sep, self.separator, value)
-        return re.sub(r"^%s+|%s+$" % (re_sep, re_sep), "", value)
+        pass
 
     def slugify_func(self, content):
-        return self.slugify_function(content)
+        pass
 
     def create_slug(self, model_instance, add):
         # get fields to populate from and slug field to set
-        if not isinstance(self._populate_from, (list, tuple)):
-            self._populate_from = (self._populate_from,)
-        slug_field = model_instance._meta.get_field(self.attname)
-
-        if add or self.overwrite:
-            # slugify the original field content and set next step to 2
-            slug_for_field = lambda lookup_value: self.slugify_func(
-                self.get_slug_fields(model_instance, lookup_value)
-            )
-            slug = self.separator.join(map(slug_for_field, self._populate_from))
-            next = 2
-        else:
-            # get slug from the current model instance and calculate next
-            # step from its number, clean-up
-            slug = self._slug_strip(getattr(model_instance, self.attname))
-            next = slug.split(self.separator)[-1]
-            if next.isdigit():
-                slug = self.separator.join(slug.split(self.separator)[:-1])
-                next = int(next)
-            else:
-                next = 2
-
-        # strip slug depending on max_length attribute of the slug field
-        # and clean-up
-        slug_len = slug_field.max_length
-        if slug_len:
-            slug = slug[:slug_len]
-        slug = self._slug_strip(slug)
-        original_slug = slug
-
-        # exclude the current model instance from the queryset used in finding
-        # the next valid slug
-        queryset = model_instance.__class__._default_manager.all()
-        if model_instance.pk:
-            queryset = queryset.exclude(pk=model_instance.pk)
-
-        # form a kwarg dict used to implement any unique_together constraints
-        kwargs = {}
-        for params in model_instance._meta.unique_together:
-            if self.attname in params:
-                for param in params:
-                    kwargs[param] = getattr(model_instance, param, None)
-        kwargs[self.attname] = slug
-
-        # increases the number while searching for the next valid slug
-        # depending on the given slug, clean-up
-        while not slug or queryset.filter(**kwargs):
-            slug = original_slug
-            end = "%s%s" % (self.separator, next)
-            end_len = len(end)
-            if slug_len and len(slug) + end_len > slug_len:
-                slug = slug[: slug_len - end_len]
-                slug = self._slug_strip(slug)
-            slug = "%s%s" % (slug, end)
-            kwargs[self.attname] = slug
-            next += 1
-        return slug
+        pass
 
     def get_slug_fields(self, model_instance, lookup_value):
-        lookup_value_path = lookup_value.split(LOOKUP_SEP)
-        attr = model_instance
-        for elem in lookup_value_path:
-            try:
-                attr = getattr(attr, elem)
-            except AttributeError:
-                raise AttributeError(
-                    "value {} in AutoSlugField's 'populate_from' argument {} returned an error - {} has no attribute {}".format(  # noqa: E501
-                        elem, lookup_value, attr, elem
-                    )
-                )
-
-        if callable(attr):
-            return "%s" % attr()
-
-        return attr
+        pass
 
     def pre_save(self, model_instance, add):
-        value = str(self.create_slug(model_instance, add))
-        setattr(model_instance, self.attname, value)
-        return value
+        pass
 
     def get_internal_type(self):
-        return "SlugField"
+        pass
 
 
 class CreationDateTimeField(DateTimeField):
@@ -186,7 +109,7 @@ class CreationDateTimeField(DateTimeField):
         DateTimeField.__init__(self, *args, **kwargs)
 
     def get_internal_type(self):
-        return "DateTimeField"
+        pass
 
 
 class ModificationDateTimeField(CreationDateTimeField):
@@ -199,12 +122,10 @@ class ModificationDateTimeField(CreationDateTimeField):
     """
 
     def pre_save(self, model, add):
-        value = datetime.datetime.now()
-        setattr(model, self.attname, value)
-        return value
+        pass
 
     def get_internal_type(self):
-        return "DateTimeField"
+        pass
 
 
 class UUIDVersionError(Exception):
@@ -242,42 +163,13 @@ class UUIDField(StringField):
         StringField.__init__(self, verbose_name, name, **kwargs)
 
     def get_internal_type(self):
-        return StringField.__name__
+        pass
 
     def contribute_to_class(self, cls, name):
-        if self.primary_key:
-            assert not cls._meta.has_auto_field, (
-                "A model can't have more than one AutoField: %s %s %s; have %s"
-                % (self, cls, name, cls._meta.auto_field)
-            )
-            super().contribute_to_class(cls, name)
-            cls._meta.has_auto_field = True
-            cls._meta.auto_field = self
-        else:
-            super().contribute_to_class(cls, name)
+        pass
 
     def create_uuid(self):
-        if not self.version or self.version == 4:
-            return uuid.uuid4()
-        elif self.version == 1:
-            return uuid.uuid1(self.node, self.clock_seq)
-        elif self.version == 2:
-            raise UUIDVersionError("UUID version 2 is not supported.")
-        elif self.version == 3:
-            return uuid.uuid3(self.namespace, self.name)
-        elif self.version == 5:
-            return uuid.uuid5(self.namespace, self.name)
-        else:
-            raise UUIDVersionError("UUID version %s is not valid." % self.version)
+        pass
 
     def pre_save(self, model_instance, add):
-        if self.auto and add:
-            value = str(self.create_uuid())
-            setattr(model_instance, self.attname, value)
-            return value
-        else:
-            value = super().pre_save(model_instance, add)
-            if self.auto and not value:
-                value = str(self.create_uuid())
-                setattr(model_instance, self.attname, value)
-        return value
+        pass

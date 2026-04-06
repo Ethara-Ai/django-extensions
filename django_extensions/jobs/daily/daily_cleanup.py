@@ -12,6 +12,4 @@ class Job(DailyJob):
     help = "Django Daily Cleanup Job"
 
     def execute(self):
-        from django.core import management
-
-        management.call_command("clearsessions")
+        pass

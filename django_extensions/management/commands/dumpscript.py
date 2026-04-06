@@ -57,84 +57,18 @@ def orm_item_locator(orm_obj):
     Where orm_obj is the referred object.
     We postpone the lookup to locate_object() which will be run on the generated script
     """
-
-    the_class = orm_obj._meta.object_name
-    original_class = the_class
-    pk_name = orm_obj._meta.pk.name
-    original_pk_name = pk_name
-    pk_value = getattr(orm_obj, pk_name)
-
-    while (
-        hasattr(pk_value, "_meta")
-        and hasattr(pk_value._meta, "pk")
-        and hasattr(pk_value._meta.pk, "name")
-    ):
-        the_class = pk_value._meta.object_name
-        pk_name = pk_value._meta.pk.name
-        pk_value = getattr(pk_value, pk_name)
-
-    clean_dict = make_clean_dict(orm_obj.__dict__)
-
-    for key in clean_dict:
-        v = clean_dict[key]
-        if v is not None:
-            if isinstance(v, datetime.datetime):
-                if not timezone.is_aware(v):
-                    v = timezone.make_aware(v)
-                clean_dict[key] = StrToCodeChanger(
-                    'dateutil.parser.parse("%s")' % v.isoformat()
-                )
-            elif not isinstance(v, (str, int, float)):
-                clean_dict[key] = str("%s" % v)
-
-    output = """ importer.locate_object(%s, "%s", %s, "%s", %s, %s ) """ % (
-        original_class,
-        original_pk_name,
-        the_class,
-        pk_name,
-        pk_value,
-        clean_dict,
-    )
-
-    return output
+    pass
 
 
 class Command(BaseCommand):
     help = "Dumps the data as a customised python script."
 
     def add_arguments(self, parser):
-        super().add_arguments(parser)
-        parser.add_argument("appname", nargs="+")
-        parser.add_argument(
-            "--autofield",
-            action="store_false",
-            dest="skip_autofield",
-            default=True,
-            help="Include Autofields (like pk fields)",
-        )
+        pass
 
     @signalcommand
     def handle(self, *args, **options):
-        app_labels = options["appname"]
-
-        # Get the models we want to export
-        models = get_models(app_labels)
-
-        # A dictionary is created to keep track of all the processed objects,
-        # so that foreign key references can be made using python variable names.
-        # This variable "context" will be passed around like the town bicycle.
-        context = {}
-
-        # Create a dumpscript object and let it format itself as a string
-        script = Script(
-            models=models,
-            context=context,
-            stdout=self.stdout,
-            stderr=self.stderr,
-            options=options,
-        )
-        self.stdout.write(str(script))
-        self.stdout.write("\n")
+        pass
 
 
 def get_models(app_labels):
@@ -143,39 +77,7 @@ def get_models(app_labels):
     TODO: If a required model is referenced, it should also be included.
     Or at least discovered with a get_or_create() call.
     """
-
-    # These models are not to be outputted,
-    # e.g. because they can be generated automatically
-    # TODO: This should be "appname.modelname" string
-    EXCLUDED_MODELS = (ContentType,)
-
-    models = []
-
-    # If no app labels are given, return all
-    if not app_labels:
-        for app in apps.get_app_configs():
-            models += [
-                m
-                for m in apps.get_app_config(app.label).get_models()
-                if m not in EXCLUDED_MODELS
-            ]
-        return models
-
-    # Get all relevant apps
-    for app_label in app_labels:
-        # If a specific model is mentioned, get only that model
-        if "." in app_label:
-            app_label, model_name = app_label.split(".", 1)
-            models.append(apps.get_model(app_label, model_name))
-        # Get all models for a given app
-        else:
-            models += [
-                m
-                for m in apps.get_app_config(app_label).get_models()
-                if m not in EXCLUDED_MODELS
-            ]
-
-    return models
+    pass
 
 
 class Code:
@@ -208,13 +110,7 @@ class Code:
 
     def get_import_lines(self):
         """Take the stored imports and converts them to lines"""
-        if self.imports:
-            return [
-                "from %s import %s" % (value, key)
-                for key, value in self.imports.items()
-            ]
-        else:
-            return []
+        pass
 
     import_lines = property(get_import_lines)
 
@@ -236,7 +132,7 @@ class ModelCode(Code):
         Return a dictionary of import statements, with the variable being
         defined as the key.
         """
-        return {self.model.__name__: smart_str(self.model.__module__)}
+        pass
 
     imports = property(get_imports)
 
@@ -245,28 +141,7 @@ class ModelCode(Code):
         Return a list of lists or strings, representing the code body.
         Each list is a block, each string is a statement.
         """
-        code = []
-
-        for counter, item in enumerate(self.model._default_manager.all()):
-            instance = InstanceCode(
-                instance=item,
-                id=counter + 1,
-                context=self.context,
-                stdout=self.stdout,
-                stderr=self.stderr,
-                options=self.options,
-            )
-            self.instances.append(instance)
-            if instance.waiting_list:
-                code += instance.lines
-
-        # After each instance has been processed, try again.
-        # This allows self referencing fields to work.
-        for instance in self.instances:
-            if instance.waiting_list:
-                code += instance.lines
-
-        return code
+        pass
 
     lines = property(get_lines)
 
@@ -314,36 +189,7 @@ class InstanceCode(Code):
         it is usually skipped to be processed later. With 'force' set, there
         will be no waiting: a get_or_create() call is written instead.
         """
-        code_lines = []
-
-        # Don't return anything if this is an instance that should be skipped
-        if self.skip():
-            return []
-
-        # Initialise our new object
-        # e.g. model_name_35 = Model()
-        code_lines += self.instantiate()
-
-        # Add each field
-        # e.g. model_name_35.field_one = 1034.91
-        #      model_name_35.field_two = "text"
-        code_lines += self.get_waiting_list()
-
-        if force:
-            # TODO: Check that M2M are not affected
-            code_lines += self.get_waiting_list(force=force)
-
-        # Print the save command for our new object
-        # e.g. model_name_35.save()
-        if code_lines:
-            code_lines.append(
-                "%s = importer.save_or_locate(%s)\n"
-                % (self.variable_name, self.variable_name)
-            )
-
-        code_lines += self.get_many_to_many_lines(force=force)
-
-        return code_lines
+        pass
 
     lines = property(get_lines)
 
@@ -356,108 +202,19 @@ class InstanceCode(Code):
 
         TODO: Allow the user to force its creation?
         """
-        if self.skip_me is not None:
-            return self.skip_me
-
-        cls = self.instance.__class__
-        using = router.db_for_write(cls, instance=self.instance)
-        collector = Collector(using=using)
-        collector.collect([self.instance], collect_related=False)
-        sub_objects = sum([list(i) for i in collector.data.values()], [])
-        sub_objects_parents = [so._meta.parents for so in sub_objects]
-        if [self.model in p for p in sub_objects_parents].count(True) == 1:
-            # since this instance isn't explicitly created, it's variable name
-            # can't be referenced in the script, so record None in context dict
-            pk_name = self.instance._meta.pk.name
-            key = "%s_%s" % (self.model.__name__, getattr(self.instance, pk_name))
-            self.context[key] = None
-            self.skip_me = True
-        else:
-            self.skip_me = False
-
-        return self.skip_me
+        pass
 
     def instantiate(self):
         """Write lines for instantiation"""
-        # e.g. model_name_35 = Model()
-        code_lines = []
-
-        if not self.instantiated:
-            code_lines.append("%s = %s()" % (self.variable_name, self.model.__name__))
-            self.instantiated = True
-
-            # Store our variable name for future foreign key references
-            pk_name = self.instance._meta.pk.name
-            key = "%s_%s" % (self.model.__name__, getattr(self.instance, pk_name))
-            self.context[key] = self.variable_name
-
-        return code_lines
+        pass
 
     def get_waiting_list(self, force=False):
         """Add lines for any waiting fields that can be completed now."""
-
-        code_lines = []
-        skip_autofield = self.options["skip_autofield"]
-
-        # Process normal fields
-        for field in list(self.waiting_list):
-            try:
-                # Find the value, add the line, remove from waiting list and move on
-                value = get_attribute_value(
-                    self.instance,
-                    field,
-                    self.context,
-                    force=force,
-                    skip_autofield=skip_autofield,
-                )
-                code_lines.append(
-                    "%s.%s = %s" % (self.variable_name, field.name, value)
-                )
-                self.waiting_list.remove(field)
-            except SkipValue:
-                # Remove from the waiting list and move on
-                self.waiting_list.remove(field)
-                continue
-            except DoLater:
-                # Move on, maybe next time
-                continue
-
-        return code_lines
+        pass
 
     def get_many_to_many_lines(self, force=False):
         """Generate lines that define many to many relations for this instance."""
-
-        lines = []
-
-        for field, rel_items in self.many_to_many_waiting_list.items():
-            for rel_item in list(rel_items):
-                try:
-                    pk_name = rel_item._meta.pk.name
-                    key = "%s_%s" % (
-                        rel_item.__class__.__name__,
-                        getattr(rel_item, pk_name),
-                    )
-                    value = "%s" % self.context[key]
-                    lines.append(
-                        "%s.%s.add(%s)" % (self.variable_name, field.name, value)
-                    )
-                    self.many_to_many_waiting_list[field].remove(rel_item)
-                except KeyError:
-                    if force:
-                        item_locator = orm_item_locator(rel_item)
-                        self.context["__extra_imports"][rel_item._meta.object_name] = (
-                            rel_item.__module__
-                        )
-                        lines.append(
-                            "%s.%s.add( %s )"
-                            % (self.variable_name, field.name, item_locator)
-                        )
-                        self.many_to_many_waiting_list[field].remove(rel_item)
-
-        if lines:
-            lines.append("")
-
-        return lines
+        pass
 
 
 class Script(Code):
@@ -483,97 +240,14 @@ class Script(Code):
         This isn't essential, but makes the script look nicer because
         more instances can be defined on their first try.
         """
-        model_queue = []
-        number_remaining_models = len(models)
-        # Max number of cycles allowed before we call it an infinite loop.
-        MAX_CYCLES = number_remaining_models
-        allowed_cycles = MAX_CYCLES
-
-        while number_remaining_models > 0:
-            previous_number_remaining_models = number_remaining_models
-
-            model = models.pop(0)
-
-            # If the model is ready to be processed, add it to the list
-            if check_dependencies(model, model_queue, context["__available_models"]):
-                model_class = ModelCode(
-                    model=model,
-                    context=context,
-                    stdout=self.stdout,
-                    stderr=self.stderr,
-                    options=self.options,
-                )
-                model_queue.append(model_class)
-
-            # Otherwise put the model back at the end of the list
-            else:
-                models.append(model)
-
-            # Check for infinite loops.
-            # This means there is a cyclic foreign key structure
-            # That cannot be resolved by re-ordering
-            number_remaining_models = len(models)
-            if number_remaining_models == previous_number_remaining_models:
-                allowed_cycles -= 1
-                if allowed_cycles <= 0:
-                    # Add remaining models, but do not remove them from the model list
-                    missing_models = [
-                        ModelCode(
-                            model=m,
-                            context=context,
-                            stdout=self.stdout,
-                            stderr=self.stderr,
-                            options=self.options,
-                        )
-                        for m in models
-                    ]
-                    model_queue += missing_models
-                    # Replace the models with the model class objects
-                    # (sure, this is a little bit of hackery)
-                    models[:] = missing_models
-                    break
-            else:
-                allowed_cycles = MAX_CYCLES
-
-        return model_queue
+        pass
 
     def get_lines(self):
         """
         Return a list of lists or strings, representing the code body.
         Each list is a block, each string is a statement.
         """
-        code = [self.FILE_HEADER.strip()]
-
-        # Queue and process the required models
-        for model_class in self._queue_models(self.models, context=self.context):
-            msg = "Processing model: %s.%s\n" % (
-                model_class.model.__module__,
-                model_class.model.__name__,
-            )
-            self.stderr.write(msg)
-            code.append("    # " + msg)
-            code.append(model_class.import_lines)
-            code.append("")
-            code.append(model_class.lines)
-
-        # Process left over foreign keys from cyclic models
-        for model in self.models:
-            msg = "Re-processing model: %s.%s\n" % (
-                model.model.__module__,
-                model.model.__name__,
-            )
-            self.stderr.write(msg)
-            code.append("    # " + msg)
-            for instance in model.instances:
-                if instance.waiting_list or instance.many_to_many_waiting_list:
-                    code.append(instance.get_lines(force=True))
-
-        code.insert(1, "    # Initial Imports")
-        code.insert(2, "")
-        for key, value in self.context["__extra_imports"].items():
-            code.insert(2, "    from %s import %s" % (value, key))
-
-        return code
+        pass
 
     lines = property(get_lines)
 
@@ -722,116 +396,21 @@ def flatten_blocks(lines, num_indents=-1):
     Take a list (block) or string (statement) and flattens it into a string
     with indentation.
     """
-    # The standard indent is four spaces
-    INDENTATION = " " * 4
-
-    if not lines:
-        return ""
-
-    # If this is a string, add the indentation and finish here
-    if isinstance(lines, str):
-        return INDENTATION * num_indents + lines
-
-    # If this is not a string, join the lines and recurse
-    return "\n".join([flatten_blocks(line, num_indents + 1) for line in lines])
+    pass
 
 
 def get_attribute_value(item, field, context, force=False, skip_autofield=True):
     """Get a string version of the given attribute's value, like repr() might."""
-    # Find the value of the field, catching any database issues
-    try:
-        value = getattr(item, field.name)
-    except ObjectDoesNotExist:
-        raise SkipValue(
-            "Could not find object for %s.%s, ignoring.\n"
-            % (item.__class__.__name__, field.name)
-        )
-
-    # AutoField: We don't include the auto fields, they'll be automatically recreated
-    if skip_autofield and isinstance(field, AutoField):
-        raise SkipValue()
-
-    # Some databases (eg MySQL) might store boolean values as 0/1,
-    # this needs to be cast as a bool
-    elif isinstance(field, BooleanField) and value is not None:
-        return repr(bool(value))
-
-    # Post file-storage-refactor, repr() on File/ImageFields no longer returns the path
-    elif isinstance(field, FileField):
-        return repr(force_str(value))
-
-    # ForeignKey fields, link directly using our stored python variable name
-    elif isinstance(field, ForeignKey) and value is not None:
-        # Special case for contenttype foreign keys: no need to output any
-        # content types in this script, as they can be generated again
-        # automatically.
-        # NB: Not sure if "is" will always work
-        if field.remote_field.model is ContentType:
-            return 'ContentType.objects.get(app_label="%s", model="%s")' % (
-                value.app_label,
-                value.model,
-            )
-
-        # Generate an identifier (key) for this foreign object
-        pk_name = value._meta.pk.name
-        key = "%s_%s" % (value.__class__.__name__, getattr(value, pk_name))
-
-        if key in context:
-            variable_name = context[key]
-            # If the context value is set to None, this should be skipped.
-            # This identifies models that have been skipped (inheritance)
-            if variable_name is None:
-                raise SkipValue()
-            # Return the variable name listed in the context
-            return "%s" % variable_name
-        elif value.__class__ not in context["__available_models"] or force:
-            context["__extra_imports"][value._meta.object_name] = value.__module__
-            item_locator = orm_item_locator(value)
-            return item_locator
-        else:
-            raise DoLater("(FK) %s.%s\n" % (item.__class__.__name__, field.name))
-
-    elif isinstance(field, (DateField, DateTimeField)) and value is not None:
-        return 'dateutil.parser.parse("%s")' % value.isoformat()
-
-    # A normal field (e.g. a python built-in)
-    else:
-        return repr(value)
+    pass
 
 
 def make_clean_dict(the_dict):
-    if "_state" in the_dict:
-        clean_dict = the_dict.copy()
-        del clean_dict["_state"]
-        return clean_dict
-    return the_dict
+    pass
 
 
 def check_dependencies(model, model_queue, avaliable_models):
     """Check that all the dependencies for this model are already in the queue."""
-    # A list of allowed links: existing fields, itself and the special case ContentType
-    allowed_links = [m.model.__name__ for m in model_queue] + [
-        model.__name__,
-        "ContentType",
-    ]
-
-    # For each ForeignKey or ManyToMany field, check that a link is possible
-
-    for field in model._meta.fields:
-        if not field.remote_field:
-            continue
-        if field.remote_field.model.__name__ not in allowed_links:
-            if field.remote_field.model not in avaliable_models:
-                continue
-            return False
-
-    for field in model._meta.many_to_many:
-        if not field.remote_field:
-            continue
-        if field.remote_field.model.__name__ not in allowed_links:
-            return False
-
-    return True
+    pass
 
 
 # EXCEPTIONS

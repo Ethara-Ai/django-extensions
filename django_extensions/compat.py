@@ -16,25 +16,12 @@ def load_tag_library(libname):
 
     Returns None if the library isn't loaded.
     """
-    from django.template.backends.django import get_installed_libraries
-    from django.template.library import InvalidTemplateLibrary
-
-    try:
-        lib = get_installed_libraries()[libname]
-        lib = importlib.import_module(lib).register
-        return lib
-    except (InvalidTemplateLibrary, KeyError):
-        return None
+    pass
 
 
 def get_template_setting(template_key, default=None):
     """Read template settings"""
-    templates_var = getattr(settings, "TEMPLATES", None)
-    if templates_var:
-        for tdict in templates_var:
-            if template_key in tdict:
-                return tdict[template_key]
-    return default
+    pass
 
 
 class UnicodeWriter:
@@ -51,17 +38,7 @@ class UnicodeWriter:
         self.encoder = codecs.getincrementalencoder(encoding)()
 
     def writerow(self, row):
-        self.writer.writerow([s.encode("utf-8") for s in row])
-        # Fetch UTF-8 output from the queue ...
-        data = self.queue.getvalue()
-        data = data.decode("utf-8")
-        # ... and reencode it into the target encoding
-        data = self.encoder.encode(data)
-        # write to the target stream
-        self.stream.write(data)
-        # empty queue
-        self.queue.truncate(0)
+        pass
 
     def writerows(self, rows):
-        for row in rows:
-            self.writerow(row)
+        pass

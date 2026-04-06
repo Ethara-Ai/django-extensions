@@ -13,4 +13,4 @@ class Command(BaseCommand):
 
     @signalcommand
     def handle(self, *args, **options):
-        return get_random_secret_key()
+        pass

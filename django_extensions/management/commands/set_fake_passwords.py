@@ -25,38 +25,8 @@ class Command(BaseCommand):
     requires_system_checks: List[str] = []
 
     def add_arguments(self, parser):
-        super().add_arguments(parser)
-        parser.add_argument(
-            "--prompt",
-            dest="prompt_passwd",
-            default=False,
-            action="store_true",
-            help="Prompts for the new password to apply to all users",
-        )
-        parser.add_argument(
-            "--password",
-            dest="default_passwd",
-            default=DEFAULT_FAKE_PASSWORD,
-            help="Use this as default password.",
-        )
+        pass
 
     @signalcommand
     def handle(self, *args, **options):
-        if not settings.DEBUG:
-            raise CommandError("Only available in debug mode")
-
-        if options["prompt_passwd"]:
-            from getpass import getpass
-
-            passwd = getpass("Password: ")
-            if not passwd:
-                raise CommandError("You must enter a valid password")
-        else:
-            passwd = options["default_passwd"]
-
-        User = get_user_model()
-        user = User()
-        user.set_password(passwd)
-        count = User.objects.all().update(password=user.password)
-
-        print("Reset %d passwords" % count)
+        pass

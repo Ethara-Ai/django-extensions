@@ -54,64 +54,39 @@ register = template.Library()
 
 def pygments_required(func):
     """Raise ImportError if pygments is not installed."""
-
-    def wrapper(*args, **kwargs):
-        if not HAS_PYGMENTS:  # pragma: no cover
-            raise ImportError("Please install 'pygments' library to use syntax_color.")
-        rv = func(*args, **kwargs)
-        return rv
-
-    return wrapper
+    pass
 
 
 @pygments_required
 @register.simple_tag
 def pygments_css():
-    return HtmlFormatter().get_style_defs(".highlight")
+    pass
 
 
 def generate_pygments_css(path=None):
-    path = os.path.join(path or os.getcwd(), "pygments.css")
-    f = open(path, "w")
-    f.write(pygments_css())
-    f.close()
+    pass
 
 
 def get_lexer(value, arg):
-    if arg is None:
-        return guess_lexer(value)
-    return get_lexer_by_name(arg)
+    pass
 
 
 @pygments_required
 @register.filter(name="colorize")
 @stringfilter
 def colorize(value, arg=None):
-    try:
-        return mark_safe(highlight(value, get_lexer(value, arg), HtmlFormatter()))
-    except ClassNotFound:
-        return value
+    pass
 
 
 @pygments_required
 @register.filter(name="colorize_table")
 @stringfilter
 def colorize_table(value, arg=None):
-    try:
-        return mark_safe(
-            highlight(value, get_lexer(value, arg), HtmlFormatter(linenos="table"))
-        )
-    except ClassNotFound:
-        return value
+    pass
 
 
 @pygments_required
 @register.filter(name="colorize_noclasses")
 @stringfilter
 def colorize_noclasses(value, arg=None):
-    try:
-        return mark_safe(
-            highlight(value, get_lexer(value, arg), HtmlFormatter(noclasses=True))
-        )
-    except ClassNotFound:
-        return value
+    pass

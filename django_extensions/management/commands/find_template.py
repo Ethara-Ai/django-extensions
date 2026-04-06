@@ -13,9 +13,4 @@ class Command(LabelCommand):
 
     @signalcommand
     def handle_label(self, template_path, **options):
-        try:
-            template = loader.get_template(template_path).template
-        except TemplateDoesNotExist:
-            sys.stderr.write("No template found\n")
-        else:
-            sys.stdout.write(self.style.SUCCESS((template.name)))
+        pass

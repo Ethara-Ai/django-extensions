@@ -32,18 +32,7 @@ DEFAULT_APP_STYLE_NAME = ".app-style.json"
 
 
 def retheme(graph_data: dict, app_style_filename: str):
-    with open(app_style_filename, "rt") as f:
-        app_style = json.load(f, object_pairs_hook=OrderedDict)
-
-    for gc in graph_data["graphs"]:
-        for g in gc:
-            if "name" in g:
-                for m in g["models"]:
-                    app_name = g["app_name"]
-                    for pattern, style in app_style.items():
-                        if fnmatch.fnmatchcase(app_name, pattern):
-                            m["style"] = dict(style)
-    return graph_data
+    pass
 
 
 class Command(BaseCommand):
@@ -280,217 +269,24 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         """Unpack self.arguments for parser.add_arguments."""
-        parser.add_argument("app_label", nargs="*")
-        for argument in self.arguments:
-            parser.add_argument(*argument.split(" "), **self.arguments[argument])
+        pass
 
     @signalcommand
     def handle(self, *args, **options):
-        args = options["app_label"]
-        if not args and not options["all_applications"]:
-            default_app_labels = getattr(settings, "GRAPH_MODELS", {}).get("app_labels")
-            if default_app_labels:
-                args = default_app_labels
-            else:
-                raise CommandError("need one or more arguments for appname")
-
-        # Determine output format based on options, file extension, and library
-        # availability.
-        outputfile = options.get("outputfile") or ""
-        _, outputfile_ext = os.path.splitext(outputfile)
-        outputfile_ext = outputfile_ext.lower()
-        output_opts_names = ["pydot", "pygraphviz", "json", "dot"]
-        output_opts = {k: v for k, v in options.items() if k in output_opts_names}
-        output_opts_count = sum(output_opts.values())
-        if output_opts_count > 1:
-            raise CommandError(
-                "Only one of %s can be set."
-                % ", ".join(["--%s" % opt for opt in output_opts_names])
-            )
-
-        if output_opts_count == 1:
-            output = next(key for key, val in output_opts.items() if val)
-        elif not outputfile:
-            # When neither outputfile nor a output format option are set,
-            # default to printing .dot format to stdout. Kept for backward
-            # compatibility.
-            output = "dot"
-        elif outputfile_ext == ".dot":
-            output = "dot"
-        elif outputfile_ext == ".json":
-            output = "json"
-        elif HAS_PYGRAPHVIZ:
-            output = "pygraphviz"
-        elif HAS_PYDOT:
-            output = "pydot"
-        else:
-            raise CommandError(
-                "Neither pygraphviz nor pydotplus could be found to generate the image."
-                " To generate text output, use the --json or --dot options."
-            )
-
-        if options.get("rankdir") != "TB" and output not in [
-            "pydot",
-            "pygraphviz",
-            "dot",
-        ]:
-            raise CommandError(
-                "--rankdir is not supported for the chosen output format"
-            )
-
-        if options.get("ordering") and output not in ["pydot", "pygraphviz", "dot"]:
-            raise CommandError(
-                "--ordering is not supported for the chosen output format"
-            )
-
-        # Consistency check: Abort if --pygraphviz or --pydot options are set
-        # but no outputfile is specified. Before 2.1.4 this silently fell back
-        # to printind .dot format to stdout.
-        if output in ["pydot", "pygraphviz"] and not outputfile:
-            raise CommandError(
-                "An output file (--output) must be specified when --pydot or "
-                "--pygraphviz are set."
-            )
-
-        cli_options = " ".join(sys.argv[2:])
-        graph_models = ModelGraph(args, cli_options=cli_options, **options)
-        graph_models.generate_graph_data()
-
-        if output == "json":
-            graph_data = graph_models.get_graph_data(as_json=True)
-            return self.render_output_json(graph_data, outputfile)
-
-        graph_data = graph_models.get_graph_data(as_json=False)
-
-        theme = options["theme"]
-        template_name = os.path.join(
-            "django_extensions", "graph_models", theme, "digraph.dot"
-        )
-        template = loader.get_template(template_name)
-
-        app_style_filename = options["app-style"]
-        if app_style_filename and not os.path.exists(app_style_filename):
-            raise CommandError(f"--app-style file {app_style_filename} not found")
-
-        if not app_style_filename:
-            # try default
-            default_app_style_filename = os.path.join(
-                settings.BASE_DIR, DEFAULT_APP_STYLE_NAME
-            )
-            if os.path.exists(default_app_style_filename):
-                app_style_filename = default_app_style_filename
-
-        if app_style_filename:
-            graph_data = retheme(graph_data, app_style_filename=app_style_filename)
-
-        dotdata = generate_dot(graph_data, template=template)
-
-        if output == "pygraphviz":
-            return self.render_output_pygraphviz(dotdata, **options)
-        if output == "pydot":
-            return self.render_output_pydot(dotdata, **options)
-        self.print_output(dotdata, outputfile)
+        pass
 
     def print_output(self, dotdata, output_file=None):
         """Write model data to file or stdout in DOT (text) format."""
-        if isinstance(dotdata, bytes):
-            dotdata = dotdata.decode()
-
-        if output_file:
-            with open(output_file, "wt") as dot_output_f:
-                dot_output_f.write(dotdata)
-        else:
-            self.stdout.write(dotdata)
+        pass
 
     def render_output_json(self, graph_data, output_file=None):
         """Write model data to file or stdout in JSON format."""
-        if output_file:
-            with open(output_file, "wt") as json_output_f:
-                json.dump(graph_data, json_output_f)
-        else:
-            self.stdout.write(json.dumps(graph_data))
+        pass
 
     def render_output_pygraphviz(self, dotdata, **kwargs):
         """Render model data as image using pygraphviz."""
-        if not HAS_PYGRAPHVIZ:
-            raise CommandError("You need to install pygraphviz python module")
-
-        version = pygraphviz.__version__.rstrip("-svn")
-        try:
-            if tuple(int(v) for v in version.split(".")) < (0, 36):
-                # HACK around old/broken AGraph before version 0.36
-                #   (ubuntu ships with this old version)
-                tmpfile = tempfile.NamedTemporaryFile()
-                tmpfile.write(dotdata)
-                tmpfile.seek(0)
-                dotdata = tmpfile.name
-        except ValueError:
-            pass
-
-        graph = pygraphviz.AGraph(dotdata)
-        graph.layout(prog=kwargs["layout"])
-        graph.draw(kwargs["outputfile"])
+        pass
 
     def render_output_pydot(self, dotdata, **kwargs):
         """Render model data as image using pydot."""
-        if not HAS_PYDOT:
-            raise CommandError("You need to install pydot python module")
-
-        graph = pydot.graph_from_dot_data(dotdata)
-        if not graph:
-            raise CommandError("pydot returned an error")
-        if isinstance(graph, (list, tuple)):
-            if len(graph) > 1:
-                sys.stderr.write(
-                    "Found more then one graph, rendering only the first one.\n"
-                )
-            graph = graph[0]
-
-        output_file = kwargs["outputfile"]
-        formats = [
-            "bmp",
-            "canon",
-            "cmap",
-            "cmapx",
-            "cmapx_np",
-            "dot",
-            "dia",
-            "emf",
-            "em",
-            "fplus",
-            "eps",
-            "fig",
-            "gd",
-            "gd2",
-            "gif",
-            "gv",
-            "imap",
-            "imap_np",
-            "ismap",
-            "jpe",
-            "jpeg",
-            "jpg",
-            "metafile",
-            "pdf",
-            "pic",
-            "plain",
-            "plain-ext",
-            "png",
-            "pov",
-            "ps",
-            "ps2",
-            "svg",
-            "svgz",
-            "tif",
-            "tiff",
-            "tk",
-            "vml",
-            "vmlz",
-            "vrml",
-            "wbmp",
-            "webp",
-            "xdot",
-        ]
-        ext = output_file[output_file.rfind(".") + 1 :]
-        format_ = ext if ext in formats else "raw"
-        graph.write(output_file, format=format_)
+        pass

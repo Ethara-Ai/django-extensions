@@ -57,7 +57,7 @@ class ActivatorModelManager(QuerySetManager):
 
         SomeModel.objects.active()
         """
-        return super().get_queryset().filter(status=1)
+        pass
 
     def inactive(self):
         """
@@ -65,7 +65,7 @@ class ActivatorModelManager(QuerySetManager):
 
         SomeModel.objects.inactive()
         """
-        return super().get_queryset().filter(status=0)
+        pass
 
 
 class ActivatorModel(Document):
@@ -92,6 +92,4 @@ class ActivatorModel(Document):
         abstract = True
 
     def save(self, *args, **kwargs):
-        if not self.activate_date:
-            self.activate_date = datetime.datetime.now()
-        super().save(*args, **kwargs)
+        pass

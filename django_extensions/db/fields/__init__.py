@@ -37,60 +37,19 @@ MAX_UNIQUE_QUERY_ATTEMPTS = getattr(
 
 class UniqueFieldMixin:
     def check_is_bool(self, attrname):
-        if not isinstance(getattr(self, attrname), bool):
-            raise ValueError("'{}' argument must be True or False".format(attrname))
+        pass
 
     @staticmethod
     def _get_fields(model_cls):
-        return [
-            (f, f.model if f.model != model_cls else None)
-            for f in model_cls._meta.get_fields()
-            if not f.is_relation or f.one_to_one or (f.many_to_one and f.related_model)
-        ]
+        pass
 
     def get_queryset(self, model_cls, slug_field):
-        for field, model in self._get_fields(model_cls):
-            if model and field == slug_field:
-                return model._default_manager.all()
-        return model_cls._default_manager.all()
+        pass
 
     def find_unique(self, model_instance, field, iterator, *args):
         # exclude the current model instance from the queryset used in finding
         # next valid hash
-        queryset = self.get_queryset(model_instance.__class__, field)
-        if model_instance.pk:
-            queryset = queryset.exclude(pk=model_instance.pk)
-
-        # form a kwarg dict used to implement any unique_together constraints
-        kwargs = {}
-        for params in model_instance._meta.unique_together:
-            if self.attname in params:
-                for param in params:
-                    kwargs[param] = getattr(model_instance, param, None)
-
-        # for support django 2.2+
-        query = Q()
-        constraints = getattr(model_instance._meta, "constraints", None)
-        if constraints:
-            unique_constraints = filter(
-                lambda c: isinstance(c, UniqueConstraint), constraints
-            )
-            for unique_constraint in unique_constraints:
-                if self.attname in unique_constraint.fields:
-                    condition = {
-                        field: getattr(model_instance, field, None)
-                        for field in unique_constraint.fields
-                        if field != self.attname
-                    }
-                    query &= Q(**condition)
-
-        new = next(iterator)
-        kwargs[self.attname] = new
-        while not new or queryset.filter(query, **kwargs):
-            new = next(iterator)
-            kwargs[self.attname] = new
-        setattr(model_instance, self.attname, new)
-        return new
+        pass
 
 
 class AutoSlugField(UniqueFieldMixin, SlugField):
@@ -190,118 +149,29 @@ class AutoSlugField(UniqueFieldMixin, SlugField):
         If an alternate separator is used, it will also replace any instances
         of the default '-' separator with the new separator.
         """
-        re_sep = "(?:-|%s)" % re.escape(self.separator)
-        value = re.sub("%s+" % re_sep, self.separator, value)
-        return re.sub(r"^%s+|%s+$" % (re_sep, re_sep), "", value)
+        pass
 
     @staticmethod
     def slugify_func(content, slugify_function):
-        if content:
-            return slugify_function(content)
-        return ""
+        pass
 
     def slug_generator(self, original_slug, start):
-        yield original_slug
-        for i in range(start, self.max_unique_query_attempts):
-            slug = original_slug
-            end = "%s%s" % (self.separator, i)
-            end_len = len(end)
-            if self.slug_len and len(slug) + end_len > self.slug_len:
-                slug = slug[: self.slug_len - end_len]
-                slug = self._slug_strip(slug)
-            slug = "%s%s" % (slug, end)
-            yield slug
-        raise RuntimeError(
-            "max slug attempts for %s exceeded (%s)"
-            % (original_slug, self.max_unique_query_attempts)
-        )
+        pass
 
     def create_slug(self, model_instance, add):
-        slug = getattr(model_instance, self.attname)
-        use_existing_slug = False
-        if slug and not self.overwrite:
-            # Existing slug and not configured to overwrite - Short-circuit
-            # here to prevent slug generation when not required.
-            use_existing_slug = True
-
-        if self.overwrite_on_add and add:
-            use_existing_slug = False
-
-        if use_existing_slug:
-            return slug
-
-        # get fields to populate from and slug field to set
-        populate_from = self._populate_from
-        if not isinstance(populate_from, (list, tuple)):
-            populate_from = (populate_from,)
-
-        slug_field = model_instance._meta.get_field(self.attname)
-        slugify_function = getattr(
-            model_instance, "slugify_function", self.slugify_function
-        )
-
-        # slugify the original field content and set next step to 2
-        slug_for_field = lambda lookup_value: self.slugify_func(
-            self.get_slug_fields(model_instance, lookup_value),
-            slugify_function=slugify_function,
-        )
-        slug = self.separator.join(map(slug_for_field, populate_from))
-        start = 2
-
-        # strip slug depending on max_length attribute of the slug field
-        # and clean-up
-        self.slug_len = slug_field.max_length
-        if self.slug_len:
-            slug = slug[: self.slug_len]
-        slug = self._slug_strip(slug)
-        original_slug = slug
-
-        if self.allow_duplicates:
-            setattr(model_instance, self.attname, slug)
-            return slug
-
-        return self.find_unique(
-            model_instance, slug_field, self.slug_generator(original_slug, start)
-        )
+        pass
 
     def get_slug_fields(self, model_instance, lookup_value):
-        if callable(lookup_value):
-            # A function has been provided
-            return "%s" % lookup_value(model_instance)
-
-        lookup_value_path = lookup_value.split(LOOKUP_SEP)
-        attr = model_instance
-        for elem in lookup_value_path:
-            try:
-                attr = getattr(attr, elem)
-            except AttributeError:
-                raise AttributeError(
-                    "value {} in AutoSlugField's 'populate_from' argument {} returned an error - {} has no attribute {}".format(  # noqa: E501
-                        elem, lookup_value, attr, elem
-                    )
-                )
-        if callable(attr):
-            return "%s" % attr()
-
-        return attr
+        pass
 
     def pre_save(self, model_instance, add):
-        value = force_str(self.create_slug(model_instance, add))
-        return value
+        pass
 
     def get_internal_type(self):
-        return "SlugField"
+        pass
 
     def deconstruct(self):
-        name, path, args, kwargs = super().deconstruct()
-        kwargs["populate_from"] = self._populate_from
-        if not self.separator == "-":
-            kwargs["separator"] = self.separator
-        if self.overwrite is not False:
-            kwargs["overwrite"] = True
-        if self.allow_duplicates is not False:
-            kwargs["allow_duplicates"] = True
-        return name, path, args, kwargs
+        pass
 
 
 class RandomCharField(UniqueFieldMixin, CharField):
@@ -374,72 +244,19 @@ class RandomCharField(UniqueFieldMixin, CharField):
         super().__init__(*args, **kwargs)
 
     def random_char_generator(self, chars):
-        for i in range(self.max_unique_query_attempts):
-            yield "".join(get_random_string(self.length, chars))
-        raise RuntimeError(
-            "max random character attempts exceeded (%s)"
-            % self.max_unique_query_attempts
-        )
+        pass
 
     def in_unique_together(self, model_instance):
-        for params in model_instance._meta.unique_together:
-            if self.attname in params:
-                return True
-        return False
+        pass
 
     def pre_save(self, model_instance, add):
-        if (not add or self.keep_default) and getattr(
-            model_instance, self.attname
-        ) != "":
-            return getattr(model_instance, self.attname)
-
-        population = ""
-        if self.include_alpha:
-            if self.lowercase:
-                population += string.ascii_lowercase
-            elif self.uppercase:
-                population += string.ascii_uppercase
-            else:
-                population += string.ascii_letters
-
-        if self.include_digits:
-            population += string.digits
-
-        if self.include_punctuation:
-            population += string.punctuation
-
-        random_chars = self.random_char_generator(population)
-        if not self.unique and not self.in_unique_together(model_instance):
-            new = next(random_chars)
-            setattr(model_instance, self.attname, new)
-            return new
-
-        return self.find_unique(
-            model_instance,
-            model_instance._meta.get_field(self.attname),
-            random_chars,
-        )
+        pass
 
     def internal_type(self):
-        return "CharField"
+        pass
 
     def deconstruct(self):
-        name, path, args, kwargs = super().deconstruct()
-        kwargs["length"] = self.length
-        del kwargs["max_length"]
-        if self.lowercase is True:
-            kwargs["lowercase"] = self.lowercase
-        if self.uppercase is True:
-            kwargs["uppercase"] = self.uppercase
-        if self.include_alpha is False:
-            kwargs["include_alpha"] = self.include_alpha
-        if self.include_digits is False:
-            kwargs["include_digits"] = self.include_digits
-        if self.include_punctuation is True:
-            kwargs["include_punctuation"] = self.include_punctuation
-        if self.unique is True:
-            kwargs["unique"] = self.unique
-        return name, path, args, kwargs
+        pass
 
 
 class CreationDateTimeField(DateTimeField):
@@ -456,17 +273,10 @@ class CreationDateTimeField(DateTimeField):
         DateTimeField.__init__(self, *args, **kwargs)
 
     def get_internal_type(self):
-        return "DateTimeField"
+        pass
 
     def deconstruct(self):
-        name, path, args, kwargs = super().deconstruct()
-        if self.editable is not False:
-            kwargs["editable"] = True
-        if self.blank is not True:
-            kwargs["blank"] = False
-        if self.auto_now_add is not False:
-            kwargs["auto_now_add"] = True
-        return name, path, args, kwargs
+        pass
 
 
 class ModificationDateTimeField(CreationDateTimeField):
@@ -483,18 +293,13 @@ class ModificationDateTimeField(CreationDateTimeField):
         DateTimeField.__init__(self, *args, **kwargs)
 
     def get_internal_type(self):
-        return "DateTimeField"
+        pass
 
     def deconstruct(self):
-        name, path, args, kwargs = super().deconstruct()
-        if self.auto_now is not False:
-            kwargs["auto_now"] = True
-        return name, path, args, kwargs
+        pass
 
     def pre_save(self, model_instance, add):
-        if not getattr(model_instance, "update_modified", True):
-            return getattr(model_instance, self.attname)
-        return super().pre_save(model_instance, add)
+        pass
 
 
 class UUIDVersionError(Exception):
@@ -549,57 +354,16 @@ class UUIDFieldMixin:
         super().__init__(verbose_name=verbose_name, *args, **kwargs)
 
     def create_uuid(self):
-        if not self.version or self.version == 4:
-            return uuid.uuid4()
-        elif self.version == 1:
-            return uuid.uuid1(self.node, self.clock_seq)
-        elif self.version == 2:
-            raise UUIDVersionError("UUID version 2 is not supported.")
-        elif self.version == 3:
-            return uuid.uuid3(self.namespace, self.uuid_name)
-        elif self.version == 5:
-            return uuid.uuid5(self.namespace, self.uuid_name)
-        else:
-            raise UUIDVersionError("UUID version %s is not valid." % self.version)
+        pass
 
     def pre_save(self, model_instance, add):
-        value = super().pre_save(model_instance, add)
-
-        if self.auto and add and value is None:
-            value = force_str(self.create_uuid())
-            setattr(model_instance, self.attname, value)
-            return value
-        else:
-            if self.auto and not value:
-                value = force_str(self.create_uuid())
-                setattr(model_instance, self.attname, value)
-
-        return value
+        pass
 
     def formfield(self, form_class=None, choices_form_class=None, **kwargs):
-        if self.auto:
-            return None
-        return super().formfield(form_class, choices_form_class, **kwargs)
+        pass
 
     def deconstruct(self):
-        name, path, args, kwargs = super().deconstruct()
-
-        if kwargs.get("max_length", None) == self.DEFAULT_MAX_LENGTH:
-            del kwargs["max_length"]
-        if self.auto is not True:
-            kwargs["auto"] = self.auto
-        if self.version != 4:
-            kwargs["version"] = self.version
-        if self.node is not None:
-            kwargs["node"] = self.node
-        if self.clock_seq is not None:
-            kwargs["clock_seq"] = self.clock_seq
-        if self.namespace is not None:
-            kwargs["namespace"] = self.namespace
-        if self.uuid_name is not None:
-            kwargs["uuid_name"] = self.name
-
-        return name, path, args, kwargs
+        pass
 
 
 class ShortUUIDField(UUIDFieldMixin, CharField):
@@ -623,15 +387,4 @@ class ShortUUIDField(UUIDFieldMixin, CharField):
         kwargs.setdefault("max_length", self.DEFAULT_MAX_LENGTH)
 
     def create_uuid(self):
-        if not self.version or self.version == 4:
-            return shortuuid.uuid()
-        elif self.version == 1:
-            return shortuuid.uuid()
-        elif self.version == 2:
-            raise UUIDVersionError("UUID version 2 is not supported.")
-        elif self.version == 3:
-            raise UUIDVersionError("UUID version 3 is not supported.")
-        elif self.version == 5:
-            return shortuuid.uuid(name=self.namespace)
-        else:
-            raise UUIDVersionError("UUID version %s is not valid." % self.version)
+        pass

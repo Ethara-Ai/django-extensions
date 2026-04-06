@@ -10,15 +10,7 @@ def _make_writeable(filename):
     Make sure that the file is writable. Useful if our source is
     read-only.
     """
-    import stat
-
-    if sys.platform.startswith("java"):
-        # On Jython there is no os.access()
-        return
-    if not os.access(filename, os.W_OK):
-        st = os.stat(filename)
-        new_permissions = stat.S_IMODE(st.st_mode) | stat.S_IWUSR
-        os.chmod(filename, new_permissions)
+    pass
 
 
 def setup_logger(logger, stream, filename=None, fmt=None):
@@ -26,21 +18,7 @@ def setup_logger(logger, stream, filename=None, fmt=None):
     Set up a logger (if no handlers exist) for console output,
     and file 'tee' output if desired.
     """
-    if len(logger.handlers) < 1:
-        console = logging.StreamHandler(stream)
-        console.setLevel(logging.DEBUG)
-        console.setFormatter(logging.Formatter(fmt))
-        logger.addHandler(console)
-        logger.setLevel(logging.DEBUG)
-        logger.propagate = False
-
-        if filename:
-            outfile = logging.FileHandler(filename)
-            outfile.setLevel(logging.INFO)
-            outfile.setFormatter(
-                logging.Formatter("%(asctime)s " + (fmt if fmt else "%(message)s"))
-            )
-            logger.addHandler(outfile)
+    pass
 
 
 class RedirectHandler(logging.Handler):
@@ -52,31 +30,13 @@ class RedirectHandler(logging.Handler):
         self.logger = logging.getLogger(name)
 
     def emit(self, record):
-        self.logger.handle(record)
+        pass
 
 
 def signalcommand(func):
     """decorator for management command handle defs that sends out a pre/post signal."""
-
-    def inner(self, *args, **kwargs):
-        pre_command.send(self.__class__, args=args, kwargs=kwargs)
-        try:
-            ret = func(self, *args, **kwargs)
-        except Exception as e:
-            post_command.send(self.__class__, args=args, kwargs=kwargs, outcome=e)
-            raise
-        else:
-            post_command.send(self.__class__, args=args, kwargs=kwargs, outcome=ret)
-        return ret
-
-    return inner
+    pass
 
 
 def has_ipdb():
-    try:
-        import ipdb  # noqa
-        import IPython  # noqa
-
-        return True
-    except ImportError:
-        return False
+    pass

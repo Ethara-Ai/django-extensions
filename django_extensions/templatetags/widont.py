@@ -29,13 +29,7 @@ def widont(value, count=1):
     >>> print(widont('NoEffect'))
     NoEffect
     """
-
-    def replace(matchobj):
-        return force_str("&nbsp;%s" % matchobj.group(1))
-
-    for i in range(count):
-        value = re_widont.sub(replace, force_str(value))
-    return value
+    pass
 
 
 @register.filter
@@ -56,11 +50,7 @@ def widont_html(value):
     >>> print(widont_html('leading text  <p>test me out</p>  trailing text'))
     leading&nbsp;text  <p>test me&nbsp;out</p>  trailing&nbsp;text
     """  # noqa: E501
-
-    def replace(matchobj):
-        return force_str("%s&nbsp;%s%s" % matchobj.groups())
-
-    return re_widont_html.sub(replace, force_str(value))
+    pass
 
 
 if __name__ == "__main__":

@@ -51,7 +51,7 @@ register = template.Library()
 @register.filter(is_safe=True)
 @stringfilter
 def parse_template(value):
-    return mark_safe(Template(value).render(Context()))
+    pass
 
 
 class CodeNode(Node):
@@ -64,14 +64,7 @@ class CodeNode(Node):
             self.name = None
 
     def render(self, context):
-        code = self.nodelist.render(context).strip()
-        lexer = get_lexer_by_name(self.language.resolve(context))
-        formatter = HtmlFormatter(linenos=False)
-        html = ""
-        if self.name:
-            name = self.name.resolve(context)
-            html = '<div class="predesc"><span>%s</span></div>' % name
-        return html + pyghighlight(code, lexer, formatter)
+        pass
 
 
 @register.tag
@@ -93,11 +86,4 @@ def highlight(parser, token):
       {% endhighlight %}
 
     """
-    if not HAS_PYGMENTS:  # pragma: no cover
-        raise ImportError("Please install 'pygments' library to use highlighting.")
-    nodelist = parser.parse(("endhighlight",))
-    parser.delete_first_token()
-    bits = token.split_contents()[1:]
-    if len(bits) < 1:
-        raise TemplateSyntaxError("'highlight' statement requires an argument")
-    return CodeNode(bits[0], nodelist, *bits[1:])
+    pass

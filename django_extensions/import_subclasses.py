@@ -24,10 +24,7 @@ class SubclassesFinder:
             self.base_classes.append(element)
 
     def _should_be_imported(self, candidate_to_import):  # type: (Tuple[str, type]) -> bool
-        for base_class in self.base_classes:
-            if issubclass(candidate_to_import[1], base_class):
-                return True
-        return False
+        pass
 
     def collect_subclasses(self):  # type: () -> Dict[str, List[Tuple[str, str]]]
         """
@@ -37,25 +34,7 @@ class SubclassesFinder:
         Currently we set alias equal to model name,
         but in future functionality of aliasing subclasses can be added.
         """
-        result = {}  # type: Dict[str, List[Tuple[str, str]]]
-        for loader, module_name, is_pkg in walk_packages(path=[str(settings.BASE_DIR)]):
-            subclasses_from_module = self._collect_classes_from_module(module_name)
-            if subclasses_from_module:
-                result[module_name] = subclasses_from_module
-        return result
+        pass
 
     def _collect_classes_from_module(self, module_name):  # type: (str) -> List[Tuple[str, str]]
-        for excluded_module in getattr(
-            settings, "SHELL_PLUS_SUBCLASSES_IMPORT_MODULES_BLACKLIST", []
-        ):
-            if module_name.startswith(excluded_module):
-                return []
-        imported_module = import_module(module_name)
-        classes_to_import = getmembers(
-            imported_module,
-            lambda element: (
-                isclass(element) and element.__module__ == imported_module.__name__
-            ),
-        )
-        classes_to_import = list(filter(self._should_be_imported, classes_to_import))
-        return [(name, name) for name, _ in classes_to_import]
+        pass

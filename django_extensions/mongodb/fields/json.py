@@ -20,23 +20,15 @@ from mongoengine.fields import StringField
 
 class JSONEncoder(json.JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, Decimal):
-            return str(obj)
-        elif isinstance(obj, datetime.datetime):
-            assert settings.TIME_ZONE == "UTC"
-            return obj.strftime("%Y-%m-%dT%H:%M:%SZ")
-        return json.JSONEncoder.default(self, obj)
+        pass
 
 
 def dumps(value):
-    assert isinstance(value, dict)
-    return JSONEncoder().encode(value)
+    pass
 
 
 def loads(txt):
-    value = json.loads(txt, parse_float=Decimal)
-    assert isinstance(value, dict)
-    return value
+    pass
 
 
 class JSONDict(dict):
@@ -62,18 +54,8 @@ class JSONField(StringField):
 
     def to_python(self, value):
         """Convert our string value to JSON after we load it from the DB"""
-        if not value:
-            return {}
-        elif isinstance(value, str):
-            res = loads(value)
-            assert isinstance(res, dict)
-            return JSONDict(**res)
-        else:
-            return value
+        pass
 
     def get_db_prep_save(self, value):
         """Convert our JSON object to a string before we save"""
-        if not value:
-            return super().get_db_prep_save("")
-        else:
-            return super().get_db_prep_save(dumps(value))
+        pass

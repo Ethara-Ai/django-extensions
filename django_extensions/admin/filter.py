@@ -11,46 +11,21 @@ class NullFieldListFilter(FieldListFilter):
         self.lookup_choices = () if lookup_choices is None else list(lookup_choices)
 
     def expected_parameters(self):
-        return [self.lookup_kwarg]
+        pass
 
     def value(self):
-        return self.used_parameters.get(self.lookup_kwarg, None)
+        pass
 
     def lookups(self, request, model_admin):
-        return (
-            ("1", _("Yes")),
-            ("0", _("No")),
-        )
+        pass
 
     def choices(self, cl):
-        yield {
-            "selected": self.value() is None,
-            "query_string": cl.get_query_string({}, [self.lookup_kwarg]),
-            "display": _("All"),
-        }
-        for lookup, title in self.lookup_choices:
-            yield {
-                "selected": self.value()
-                == prepare_lookup_value(self.lookup_kwarg, lookup),
-                "query_string": cl.get_query_string(
-                    {
-                        self.lookup_kwarg: lookup,
-                    },
-                    [],
-                ),
-                "display": title,
-            }
+        pass
 
     def queryset(self, request, queryset):
-        if self.value() is not None:
-            kwargs = {self.lookup_kwarg: self.value()}
-            return queryset.filter(**kwargs)
-        return queryset
+        pass
 
 
 class NotNullFieldListFilter(NullFieldListFilter):
     def lookups(self, request, model_admin):
-        return (
-            ("0", _("Yes")),
-            ("1", _("No")),
-        )
+        pass

@@ -66,4 +66,4 @@ class InternalIPS(Container):
         """
         :return: an iterator over individual IP subnets within this IP set.
         """
-        return sorted(self._cidrs)
+        pass

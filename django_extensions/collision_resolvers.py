@@ -22,8 +22,7 @@ class BaseCR(metaclass=ABCMeta):
 
     @classmethod
     def get_app_name_and_model(cls, full_model_path):  # type: (str) -> Tuple[str, str]
-        model_class = import_string(full_model_path)
-        return model_class._meta.app_config.name, model_class.__name__
+        pass
 
     @abstractmethod
     def resolve_collisions(self, namespace):  # type: (Dict[str, List[str]]) -> Dict[str, str]
@@ -38,36 +37,17 @@ class LegacyCR(BaseCR):
     """
 
     def resolve_collisions(self, namespace):
-        result = {}
-        for name, models in namespace.items():
-            result[name] = models[-1]
-        return result
+        pass
 
 
 class AppsOrderCR(LegacyCR, metaclass=ABCMeta):
     APP_PRIORITIES = None  # type: List[str]
 
     def resolve_collisions(self, namespace):
-        assert self.APP_PRIORITIES is not None, (
-            "You must define APP_PRIORITIES in your resolver class!"
-        )
-        result = {}
-        for name, models in namespace.items():
-            if len(models) > 0:
-                sorted_models = self._sort_models_depending_on_priorities(models)
-                result[name] = sorted_models[0][1]
-        return result
+        pass
 
     def _sort_models_depending_on_priorities(self, models):  # type: (List[str]) -> List[Tuple[int, str]]
-        models_with_priorities = []
-        for model in models:
-            try:
-                app_name, _ = self.get_app_name_and_model(model)
-                position = self.APP_PRIORITIES.index(app_name)
-            except (ImportError, ValueError):
-                position = sys.maxsize
-            models_with_priorities.append((position, model))
-        return sorted(models_with_priorities)
+        pass
 
 
 class InstalledAppsOrderCR(AppsOrderCR):
@@ -80,9 +60,7 @@ class InstalledAppsOrderCR(AppsOrderCR):
 
     @property
     def APP_PRIORITIES(self):
-        from django.conf import settings
-
-        return getattr(settings, "INSTALLED_APPS", [])
+        pass
 
 
 class PathBasedCR(LegacyCR, metaclass=ABCMeta):
@@ -98,17 +76,7 @@ class PathBasedCR(LegacyCR, metaclass=ABCMeta):
         pass
 
     def resolve_collisions(self, namespace):
-        base_imports = super(PathBasedCR, self).resolve_collisions(namespace)
-        for name, models in namespace.items():
-            if len(models) <= 1:
-                continue
-            for model in models:
-                new_name = self.transform_import(model)
-                assert isinstance(new_name, str), (
-                    "result of transform_import must be str!"
-                )
-                base_imports[new_name] = model
-        return base_imports
+        pass
 
 
 class FullPathCR(PathBasedCR):
@@ -119,9 +87,7 @@ class FullPathCR(PathBasedCR):
     """  # noqa: E501
 
     def transform_import(self, module_path):
-        module, model = module_path.rsplit(".models", 1)
-        module_path = module + model
-        return module_path.replace(".", "_")
+        pass
 
 
 class AppNameCR(PathBasedCR, metaclass=ABCMeta):
@@ -135,12 +101,7 @@ class AppNameCR(PathBasedCR, metaclass=ABCMeta):
     MODIFICATION_STRING = None  # type: Optional[str]
 
     def transform_import(self, module_path):
-        assert self.MODIFICATION_STRING is not None, (
-            "You must define MODIFICATION_STRING in your resolver class!"
-        )
-        app_name, model_name = self.get_app_name_and_model(module_path)
-        app_name = app_name.replace(".", "_")
-        return self.MODIFICATION_STRING.format(app_name=app_name, model_name=model_name)
+        pass
 
 
 class AppNamePrefixCR(AppNameCR):
@@ -202,14 +163,7 @@ class AppLabelCR(PathBasedCR, metaclass=ABCMeta):
     MODIFICATION_STRING = None  # type: Optional[str]
 
     def transform_import(self, module_path):
-        assert self.MODIFICATION_STRING is not None, (
-            "You must define MODIFICATION_STRING in your resolver class!"
-        )
-        model_class = import_string(module_path)
-        app_label, model_name = model_class._meta.app_label, model_class.__name__
-        return self.MODIFICATION_STRING.format(
-            app_label=app_label, model_name=model_name
-        )
+        pass
 
 
 class AppLabelPrefixCR(AppLabelCR):
@@ -236,58 +190,21 @@ class CollisionResolvingRunner:
 
     def run_collision_resolver(self, models_to_import):
         # type: (Dict[str, List[str]]) -> Dict[str, List[Tuple[str, str]]]
-        dictionary_of_names = self._get_dictionary_of_names(models_to_import)  # type: Dict[str, str]
-        return self._get_dictionary_of_modules(dictionary_of_names)
+        pass
 
     @classmethod
     def _get_dictionary_of_names(cls, models_to_import):  # type: (Dict[str, List[str]]) -> (Dict[str, str])
-        from django.conf import settings
-
-        collision_resolver_class = import_string(
-            getattr(
-                settings,
-                "SHELL_PLUS_MODEL_IMPORTS_RESOLVER",
-                "django_extensions.collision_resolvers.LegacyCR",
-            )
-        )
-
-        cls._assert_is_collision_resolver_class_correct(collision_resolver_class)
-        result = collision_resolver_class().resolve_collisions(models_to_import)
-        cls._assert_is_collision_resolver_result_correct(result)
-
-        return result
+        pass
 
     @classmethod
     def _assert_is_collision_resolver_result_correct(cls, result):
-        assert isinstance(result, dict), (
-            "Result of resolve_collisions function must be a dict!"
-        )
-        for key, value in result.items():
-            assert isinstance(key, str), (
-                "key in collision resolver result should be str not %s" % key
-            )
-            assert isinstance(value, str), (
-                "value in collision resolver result should be str not %s" % value
-            )
+        pass
 
     @classmethod
     def _assert_is_collision_resolver_class_correct(cls, collision_resolver_class):
-        assert inspect.isclass(collision_resolver_class) and issubclass(
-            collision_resolver_class, BaseCR
-        ), "SHELL_PLUS_MODEL_IMPORTS_RESOLVER must be subclass of BaseCR!"
-        assert (
-            len(
-                inspect.getfullargspec(collision_resolver_class.resolve_collisions).args
-            )
-            == 2
-        ), "resolve_collisions function must take one argument!"
+        pass
 
     @classmethod
     def _get_dictionary_of_modules(cls, dictionary_of_names):
         # type: (Dict[str, str]) -> Dict[str, List[Tuple[str, str]]]
-        dictionary_of_modules = {}  # type: Dict[str, List[Tuple[str, str]]]
-        for alias, model in dictionary_of_names.items():
-            module_path, model_name = model.rsplit(".", 1)
-            dictionary_of_modules.setdefault(module_path, [])
-            dictionary_of_modules[module_path].append((model_name, alias))
-        return dictionary_of_modules
+        pass

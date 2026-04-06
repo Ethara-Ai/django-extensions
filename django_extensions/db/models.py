@@ -21,10 +21,7 @@ class TimeStampedModel(models.Model):
     modified = ModificationDateTimeField(_("modified"))
 
     def save(self, **kwargs):
-        self.update_modified = kwargs.pop(
-            "update_modified", getattr(self, "update_modified", True)
-        )
-        super().save(**kwargs)
+        pass
 
     class Meta:
         get_latest_by = "modified"
@@ -75,11 +72,11 @@ class ActivatorQuerySet(models.query.QuerySet):
 
     def active(self):
         """Return active query set"""
-        return self.filter(status=ActivatorModel.ACTIVE_STATUS)
+        pass
 
     def inactive(self):
         """Return inactive query set"""
-        return self.filter(status=ActivatorModel.INACTIVE_STATUS)
+        pass
 
 
 class ActivatorModelManager(models.Manager):
@@ -92,7 +89,7 @@ class ActivatorModelManager(models.Manager):
 
     def get_queryset(self):
         """Use ActivatorQuerySet for all results"""
-        return ActivatorQuerySet(model=self.model, using=self._db)
+        pass
 
     def active(self):
         """
@@ -100,7 +97,7 @@ class ActivatorModelManager(models.Manager):
 
         SomeModel.objects.active(), proxy to ActivatorQuerySet.active
         """
-        return self.get_queryset().active()
+        pass
 
     def inactive(self):
         """
@@ -108,7 +105,7 @@ class ActivatorModelManager(models.Manager):
 
         SomeModel.objects.inactive(), proxy to ActivatorQuerySet.inactive
         """
-        return self.get_queryset().inactive()
+        pass
 
 
 class ActivatorModel(models.Model):
@@ -144,6 +141,4 @@ class ActivatorModel(models.Model):
         abstract = True
 
     def save(self, *args, **kwargs):
-        if not self.activate_date:
-            self.activate_date = now()
-        super().save(*args, **kwargs)
+        pass

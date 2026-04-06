@@ -15,8 +15,4 @@ class Command(BaseCommand):
 
     @signalcommand
     def handle(self, *args, **options):
-        message = (
-            "This is a test exception via the "
-            "django-extensions raise_test_exception management command."
-        )
-        raise DjangoExtensionsTestException(message)
+        pass
